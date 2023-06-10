@@ -8,7 +8,7 @@ We have all come across ATMs in our cities and it is built on Java This complex 
 2. Withdraw
 3. Deposit
 4. Transfer
- 5.Quit
+5.Quit
 
 
 
