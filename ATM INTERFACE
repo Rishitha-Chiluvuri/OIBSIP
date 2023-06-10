@@ -1,0 +1,220 @@
+package Package;
+
+import java.sql.*;
+import java.util.Scanner;
+
+public class ATMSystem {
+    // Database credentials
+    static final String DB_URL = "jdbc:mysql://localhost:3306/mydb";
+    static final String USER = "root";
+    static final String PASS = "root";
+
+    public static void main(String[] args) {
+        Connection conn = null;
+        Statement stmt = null;
+        try {
+            // Register JDBC driver
+            Class.forName("com.mysql.cj.jdbc.Driver");
+
+            // Open a connection
+            System.out.println("Connecting to database...");
+            conn = DriverManager.getConnection(DB_URL, USER, PASS);
+
+            // Create a statement
+            stmt = conn.createStatement();
+
+            // Prompt user for input
+            System.out.println("Welcome to the ATM system!");
+            int userId = promptForUserId();
+            int userPin = promptForUserPin();
+
+            // Check if the user is valid
+            if (isUserValid(stmt, userId, userPin)) {
+                // Perform ATM operations
+                boolean exit = false;
+                while (!exit) {
+                    int choice = displayMenu();
+
+                    switch (choice) {
+                        case 1:
+                            // Perform Transactions History operation
+                            displayTransactionHistory(stmt, userId);
+                            break;
+                        case 2:
+                            // Perform Withdraw operation
+                            performWithdrawal(stmt, userId);
+                            break;
+                        case 3:
+                            // Perform Deposit operation
+                            performDeposit(stmt, userId);
+                            break;
+                        case 4:
+                            // Perform Transfer operation
+                            performTransfer(stmt, userId);
+                            break;
+                        case 5:
+                            // Quit the application
+                            exit = true;
+                            System.out.println("Thank you for using the ATM system!");
+                            break;
+                        default:
+                            System.out.println("Invalid choice. Please try again.");
+                    }
+                }
+            } else {
+                System.out.println("Invalid user ID or PIN. Exiting...");
+            }
+
+            // Close the statement and connection
+            stmt.close();
+            conn.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (stmt != null) stmt.close();
+            } catch (SQLException se2) {
+                se2.printStackTrace();
+            }
+            try {
+                if (conn != null) conn.close();
+            } catch (SQLException se) {
+                se.printStackTrace();
+            }
+        }
+    }
+
+    private static int promptForUserId() {
+        System.out.print("Enter your user ID: ");
+        Scanner scanner = new Scanner(System.in);
+        return scanner.nextInt();
+    }
+
+    private static int promptForUserPin() {
+        System.out.print("Enter your user PIN: ");
+        Scanner scanner = new Scanner(System.in);
+        return scanner.nextInt();
+    }
+
+    private static boolean isUserValid(Statement stmt, int userId, int userPin) throws SQLException {
+        String sql = "SELECT * FROM user WHERE user_id = " + userId + " AND user_pin = " + userPin;
+        ResultSet rs = stmt.executeQuery(sql);
+        return rs.next();
+    }
+
+    private static int displayMenu() {
+        System.out.println("Please enter your choice:");
+        System.out.println("1. Transactions History");
+        System.out.println("2. Withdraw");
+        System.out.println("3. Deposit");
+        System.out.println("4. Transfer");
+        System.out.println("5. Quit");
+        System.out.print("Choice: ");
+        Scanner scanner = new Scanner(System.in);
+        return scanner.nextInt();
+    }
+
+    private static void displayTransactionHistory(Statement stmt, int userId) throws SQLException {
+        String sql = "SELECT * FROM transactions WHERE user_id = " + userId;
+        ResultSet rs = stmt.executeQuery(sql);
+
+        System.out.println("Transaction History:");
+        while (rs.next()) {
+            int transactionId = rs.getInt("transaction_id");
+            String type = rs.getString("type");
+            double amount = rs.getDouble("amount");
+            Timestamp timestamp = rs.getTimestamp("timestamp");
+
+            System.out.println("Transaction ID: " + transactionId);
+            System.out.println("Type: " + type);
+            System.out.println("Amount: " + amount);
+            System.out.println("Timestamp: " + timestamp);
+            System.out.println("--------------------------------------");
+        }
+    }
+
+    private static void performWithdrawal(Statement stmt, int userId) throws SQLException {
+        double amount = promptForAmount("Enter the withdrawal amount: ");
+
+        // Check if the user has sufficient balance
+        double currentBalance = getUserBalance(stmt, userId);
+        if (amount <= currentBalance) {
+            // Update the balance and insert a new transaction
+            double updatedBalance = currentBalance - amount;
+            updateBalance(stmt, userId, updatedBalance);
+            insertTransaction(stmt, userId, "Withdrawal", amount);
+
+            System.out.println("Withdrawal successful.");
+        } else {
+            System.out.println("Insufficient balance.");
+        }
+    }
+
+    private static void performDeposit(Statement stmt, int userId) throws SQLException {
+        double amount = promptForAmount("Enter the deposit amount: ");
+
+        // Update the balance and insert a new transaction
+        double currentBalance = getUserBalance(stmt, userId);
+        double updatedBalance = currentBalance + amount;
+        updateBalance(stmt, userId, updatedBalance);
+        insertTransaction(stmt, userId, "Deposit", amount);
+
+        System.out.println("Deposit successful.");
+    }
+
+    private static void performTransfer(Statement stmt, int userId) throws SQLException {
+        int recipientId = promptForRecipientId();
+        double amount = promptForAmount("Enter the transfer amount: ");
+
+        // Check if the user has sufficient balance
+        double currentBalance = getUserBalance(stmt, userId);
+        if (amount <= currentBalance) {
+            // Update the balance of both users and insert transactions
+            double senderBalance = currentBalance - amount;
+            double recipientBalance = getUserBalance(stmt, recipientId) + amount;
+
+            updateBalance(stmt, userId, senderBalance);
+            updateBalance(stmt, recipientId, recipientBalance);
+
+            insertTransaction(stmt, userId, "Transfer (To: " + recipientId + ")", amount);
+            insertTransaction(stmt, recipientId, "Transfer (From: " + userId + ")", amount);
+
+            System.out.println("Transfer successful.");
+        } else {
+            System.out.println("Insufficient balance.");
+        }
+    }
+
+    private static int promptForRecipientId() {
+    	Scanner scanner = new Scanner(System.in);
+        System.out.print("Enter the recipient's user ID: ");
+        int id=scanner.nextInt();
+        return id;
+    }
+
+    private static double promptForAmount(String message) {
+    	Scanner scanner = new Scanner(System.in);
+        System.out.print(message);
+        double amt=scanner.nextDouble();
+        return amt;
+    }
+
+    private static double getUserBalance(Statement stmt, int userId) throws SQLException {
+        String sql = "SELECT balance FROM user WHERE user_id = " + userId;
+        ResultSet rs = stmt.executeQuery(sql);
+        if (rs.next()) {
+            return rs.getDouble("balance");
+        }
+        return 0.0;
+    }
+
+    private static void updateBalance(Statement stmt, int userId, double balance) throws SQLException {
+        String sql = "UPDATE user SET balance = " + balance + " WHERE user_id = " + userId;
+        stmt.executeUpdate(sql);
+    }
+
+    private static void insertTransaction(Statement stmt, int userId, String type, double amount) throws SQLException {
+        String sql = "INSERT INTO transactions (user_id, type, amount) VALUES (" + userId + ", '" + type + "', " + amount + ")";
+        stmt.executeUpdate(sql);
+    }
+}
