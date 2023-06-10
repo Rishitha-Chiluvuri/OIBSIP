@@ -1,0 +1,182 @@
+package Package;
+
+import java.sql.*;
+import java.util.Scanner;
+
+class OnlineExaminationSystem {
+	    private static final String DB_URL = "jdbc:mysql://localhost:3306/mydb";
+	    private static final String DB_USER = "root";
+	    private static final String DB_PASSWORD = "root";
+
+	    public static void main(String[] args) {
+	        try {
+	            Class.forName("com.mysql.cj.jdbc.Driver");
+	            Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+	            Statement statement = connection.createStatement();
+
+	            Scanner scanner = new Scanner(System.in);
+	            boolean exit = false;
+
+	            while (!exit) {
+	                System.out.println("Welcome to the Online Examination System!");
+	                System.out.println("1. Login");
+	                System.out.println("2. Exit");
+	                System.out.print("Please enter your choice: ");
+	                int choice = scanner.nextInt();
+	                scanner.nextLine(); // Consume newline character
+
+	                switch (choice) {
+	                    case 1:
+	                        login(scanner, statement);
+	                        break;
+	                    case 2:
+	                        exit = true;
+	                        break;
+	                    default:
+	                        System.out.println("Invalid choice. Please try again.");
+	                }
+	            }
+
+	            statement.close();
+	            connection.close();
+	        } catch (Exception e) {
+	            e.printStackTrace();
+	        }
+	    }
+
+	    private static void login(Scanner scanner, Statement statement) {
+	        try {
+	            System.out.print("Please enter your username: ");
+	            String username = scanner.nextLine();
+	            System.out.print("Please enter your password: ");
+	            String password = scanner.nextLine();
+
+	            if (authenticateUser(username, password, statement)) {
+	                System.out.println("Login successful!");
+
+	                boolean loggedIn = true;
+
+	                while (loggedIn) {
+	                    System.out.println("Welcome, " + username + "!");
+	                    System.out.println("1. Update Profile");
+	                    System.out.println("2. Update Password");
+	                    System.out.println("3. Select and Submit Answers");
+	                    System.out.println("4. Logout");
+	                    System.out.print("Please enter your choice: ");
+	                    int choice = scanner.nextInt();
+	                    scanner.nextLine(); // Consume newline character
+
+	                    switch (choice) {
+	                        case 1:
+	                            updateProfile(scanner, username, statement);
+	                            break;
+	                        case 2:
+	                            updatePassword(scanner, username, statement);
+	                            break;
+	                        case 3:
+	                            selectAnswers(scanner, statement);
+	                            break;
+	                        case 4:
+	                            loggedIn = false;
+	                            System.out.println("Logged out successfully!");
+	                            break;
+	                        default:
+	                            System.out.println("Invalid choice. Please try again.");
+	                    }
+	                }
+	            } else {
+	                System.out.println("Invalid username or password. Login failed.");
+	            }
+	        } catch (Exception e) {
+	            e.printStackTrace();
+	        }
+	    }
+
+	    private static boolean authenticateUser(String username, String password, Statement statement) throws SQLException {
+	        String sql = "SELECT * FROM login WHERE username = '" + username + "' AND password = '" + password + "'";
+	        ResultSet resultSet = statement.executeQuery(sql);
+	        return resultSet.next();
+	    }
+
+	    private static void updateProfile(Scanner scanner, String username, Statement statement) {
+	        try {
+	            System.out.print("Please enter your updated profile information: ");
+	            String profileInfo = scanner.nextLine();
+
+	            String sql = "UPDATE users SET profile_info = '" + profileInfo + "' WHERE username = '" + username + "'";
+	            int rowsAffected = statement.executeUpdate(sql);
+
+	            if (rowsAffected > 0) {
+	                System.out.println("Profile updated successfully!");
+	            } else {
+	                System.out.println("Profile update failed.");
+	            }
+	        } catch (Exception e) {
+	            e.printStackTrace();
+	        }
+	    }
+
+	    private static void updatePassword(Scanner scanner, String username, Statement statement) {
+	        try {
+	            System.out.print("Please enter your current password: ");
+	            String currentPassword = scanner.nextLine();
+	            System.out.print("Please enter your new password: ");
+	            String newPassword = scanner.nextLine();
+
+	            String sql = "UPDATE users SET password = '" + newPassword + "' WHERE username = '" + username + "' AND password = '" + currentPassword + "'";
+	            int rowsAffected = statement.executeUpdate(sql);
+
+	            if (rowsAffected > 0) {
+	                System.out.println("Password updated successfully!");
+	            } else {
+	                System.out.println("Incorrect current password. Password update failed.");
+	            }
+	        } catch (Exception e) {
+	            e.printStackTrace();
+	        }
+	    }
+
+	    private static void selectAnswers(Scanner scanner, Statement statement) {
+	        try {
+	            System.out.println("Select and Submit Answers:");
+
+	            String sql = "SELECT * FROM questions";
+	            ResultSet resultSet = statement.executeQuery(sql);
+
+	            int totalQuestions = 0;
+	            int score = 0;
+
+	            while (resultSet.next()) {
+	                totalQuestions++;
+
+	                int questionId = resultSet.getInt("id");
+	                String questionText = resultSet.getString("question");
+	                String optionA = resultSet.getString("option_a");
+	                String optionB = resultSet.getString("option_b");
+	                String optionC = resultSet.getString("option_c");
+	                String optionD = resultSet.getString("option_d");
+	                int correctAnswer = resultSet.getInt("correct_answer");
+
+	                System.out.println(questionId + ". " + questionText);
+	                System.out.println("A. " + optionA);
+	                System.out.println("B. " + optionB);
+	                System.out.println("C. " + optionC);
+	                System.out.println("D. " + optionD);
+
+	                System.out.print("Please enter your answer (A, B, C, or D): ");
+	                String userAnswer = scanner.nextLine().toUpperCase();
+
+	                int userAnswerIndex = userAnswer.charAt(0) - 'A' + 1;
+
+	                if (userAnswerIndex == correctAnswer) {
+	                    score++;
+	                }
+	            }
+
+	            System.out.println("Answers submitted successfully!");
+	            System.out.println("Your score: " + score + " out of " + totalQuestions);
+	        } catch (Exception e) {
+	            e.printStackTrace();
+	        }
+	    }
+	}
