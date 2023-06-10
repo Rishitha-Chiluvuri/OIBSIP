@@ -1,0 +1,200 @@
+package Package;
+
+import java.sql.*;
+import java.util.Scanner;
+
+class Book {
+    private int id;
+    private String title;
+    private String author;
+    private String category;
+
+    public Book(int id, String title, String author, String category) {
+        this.id = id;
+        this.title = title;
+        this.author = author;
+        this.category = category;
+    }
+
+    // Getters and setters
+    public int getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getAuthor() {
+        return author;
+    }
+
+    public void setAuthor(String author) {
+        this.author = author;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
+}
+
+class AdminModule {
+    private Connection connection;
+
+    public AdminModule() {
+        try {
+            // Establish a connection to the MySQL database
+            String url = "jdbc:mysql://localhost:3306/mydb";
+            String username = "root";
+            String password = "root";
+            connection = DriverManager.getConnection(url, username, password);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Add a new book to the library
+    public void addBook(String title, String author, String category) {
+        try {
+            String query = "INSERT INTO book (title, author, category) VALUES (?, ?, ?)";
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setString(1, title);
+            statement.setString(2, author);
+            statement.setString(3, category);
+            statement.executeUpdate();
+            System.out.println("Book added successfully!");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Update an existing book's details
+    public void updateBook(int id, String newTitle, String newAuthor, String newCategory) {
+        try {
+            String query = "UPDATE book SET title = ?, author = ?, category = ? WHERE id = ?";
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setString(1, newTitle);
+            statement.setString(2, newAuthor);
+            statement.setString(3, newCategory);
+            statement.setInt(4, id);
+            int rowsAffected = statement.executeUpdate();
+            if (rowsAffected > 0) {
+                System.out.println("Book details updated successfully!");
+            } else {
+                System.out.println("Book not found!");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Delete a book from the library
+    public void deleteBook(int id) {
+        try {
+            String query = "DELETE FROM book WHERE id = ?";
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setInt(1, id);
+            int rowsAffected = statement.executeUpdate();
+            if (rowsAffected > 0) {
+                System.out.println("Book deleted successfully!");
+            } else {
+                System.out.println("Book not found!");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Display all books in the library
+    public void displayBooks() {
+        try {
+            String query = "SELECT * FROM book";
+            Statement statement = connection.createStatement();
+            ResultSet resultSet = statement.executeQuery(query);
+            if (!resultSet.isBeforeFirst()) {
+                System.out.println("No books available in the library!");
+            } else {
+                System.out.println("Books in the library:");
+                while (resultSet.next()) {
+                    int id = resultSet.getInt("id");
+                    String title = resultSet.getString("title");
+                    String author = resultSet.getString("author");
+                    String category = resultSet.getString("category");
+                    System.out.println("ID: " + id);
+                    System.out.println("Title: " + title);
+                    System.out.println("Author: " + author);
+                    System.out.println("Category: " + category);
+                    System.out.println("-----------------------------");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+public class LibraryManagementSystem {
+    public static void main(String[] args) {
+        AdminModule adminModule = new AdminModule();
+        Scanner scanner = new Scanner(System.in);
+
+        while (true) {
+            System.out.println("1. Add a book");
+            System.out.println("2. Update a book");
+            System.out.println("3. Delete a book");
+            System.out.println("4. Display all books");
+            System.out.println("5. Exit");
+            System.out.print("Enter your choice: ");
+            int choice = scanner.nextInt();
+            scanner.nextLine(); // Consume newline character
+
+            switch (choice) {
+                case 1:
+                    System.out.print("Enter the book title: ");
+                    String title = scanner.nextLine();
+                    System.out.print("Enter the author name: ");
+                    String author = scanner.nextLine();
+                    System.out.print("Enter the book category: ");
+                    String category = scanner.nextLine();
+                    adminModule.addBook(title, author, category);
+                    break;
+                case 2:
+                    System.out.print("Enter the ID of the book to update: ");
+                    int bookId = scanner.nextInt();
+                    scanner.nextLine(); // Consume newline character
+                    System.out.print("Enter the new title: ");
+                    String newTitle = scanner.nextLine();
+                    System.out.print("Enter the new author: ");
+                    String newAuthor = scanner.nextLine();
+                    System.out.print("Enter the new category: ");
+                    String newCategory = scanner.nextLine();
+                    adminModule.updateBook(bookId, newTitle, newAuthor, newCategory);
+                    break;
+                case 3:
+                    System.out.print("Enter the ID of the book to delete: ");
+                    int bookIdToDelete = scanner.nextInt();
+                    scanner.nextLine(); // Consume newline character
+                    adminModule.deleteBook(bookIdToDelete);
+                    break;
+                case 4:
+                    adminModule.displayBooks();
+                    break;
+                case 5:
+                    System.out.println("Exiting...");
+                    System.exit(0);
+                default:
+                    System.out.println("Invalid choice. Please try again.");
+                    break;
+            }
+        }
+    }
+}
+
